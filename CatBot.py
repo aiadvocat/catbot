@@ -19,8 +19,8 @@ VECTOR_LIMIT = 1024
 
 model = SentenceTransformer("all-MiniLM-L6-v2", device="cpu")
 
-st.title('AIdvoCat {^o_o^}')
-st.sidebar.image("avocado_cat_transparent.png", caption="Ask AIdvoCat", use_container_width=True)
+st.title('Catbot {^o_o^}')
+st.sidebar.image("avocado_cat_transparent.png", caption="Ask Catbot", use_container_width=True)
 
 
 openai_api_key = st.sidebar.text_input("OpenAI API Key", OPENAIKEY, type="password")
@@ -174,7 +174,7 @@ with st.form("rag_form"):
 
 with st.form("my_form"):
     text = st.text_area(
-        "Ask AIAdvocat:",
+        "Ask Catbot:",
         "Who is Steve?",
     )
     submitted = st.form_submit_button("Submit")

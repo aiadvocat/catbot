@@ -1,6 +1,6 @@
-# AIdvoCat
+# Catbot
 
-AIdvoCat is an AI-powered C(h)atcat built with LangChain, OpenAI, and Pinecone. The bot leverages embeddings, machine learning models, and a vector database to provide efficient and relevant responses based on input queries.
+Catbot is an AI-powered C(h)atbot built with LangChain, OpenAI, and Pinecone. The bot leverages embeddings, machine learning models, and a vector database to provide efficient and relevant responses based on input queries.  It exists as a demo environment to experiement with the basic architecture of RAG based chatbots and prompting.
 
 ## Features
 
@@ -14,7 +14,7 @@ AIdvoCat is an AI-powered C(h)atcat built with LangChain, OpenAI, and Pinecone. 
 1. **Clone the repository**:
     ```bash
     git clone <repository_url>
-    cd AIdvoCat
+    cd catbot
     ```
 
 2. **Install the required packages**:
@@ -29,7 +29,7 @@ AIdvoCat is an AI-powered C(h)atcat built with LangChain, OpenAI, and Pinecone. 
 
 4. **Run the application**:
     ```bash
-    streamlit run AIdvoCat.py
+    streamlit run CatBot.py
     ```
 
 ## Usage
