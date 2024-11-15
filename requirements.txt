@@ -1,0 +1,10 @@
+streamlit
+openai
+langchain
+transformers
+pinecone-client
+langchain
+langchain_openai
+langchain-community
+torch==2.4.1
+sentence-transformers==3.1.1
