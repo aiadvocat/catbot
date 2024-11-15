@@ -43,7 +43,7 @@ Once the app is running, navigate to `http://localhost:8501` to access the chatb
 
 ## Project Structure
 
-- `AIdvoCat.py`: The main application script.
+- `CatBot.py`: The main application script.
 - `requirements.txt`: Lists all dependencies for the project.
 
 ## Dependencies
