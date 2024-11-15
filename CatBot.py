@@ -11,7 +11,7 @@ from pinecone import ServerlessSpec
 
 PINECONEAPI = os.getenv("PINECONEAPI")
 OPENAIKEY = os.getenv("OPENAIKEY")
-LLM="gpt-3.5-turbo"
+LLM = os.getenv("LLM","gpt-3.5-turbo")
 
 BATCH_SIZE = 128
 VECTOR_LIMIT = 1024
