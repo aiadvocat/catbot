@@ -16,22 +16,88 @@ LLM = os.getenv("LLM","gpt-3.5-turbo")
 BATCH_SIZE = 128
 VECTOR_LIMIT = 1024
 
+# LLM Parameters
+#temperature = 0.7
+
+# List of commonly used OpenAI models
+models = [
+    "gpt-4",
+    "gpt-4-32k",
+    "gpt-3.5-turbo",
+    "gpt-3.5-turbo-16k",
+    "code-davinci-002",
+    "code-cushman-001",
+    "text-davinci-003",
+    "davinci",
+    "text-embedding-ada-002",
+    "custom-fine-tuned"
+]
+
+# Default model
+default_model = LLM
+
+# Find index of default model
+default_model_index = models.index(default_model)
+
+# The 12 Brand Archetypes and personality parameters
+archetypes = {
+    "Innocent": {"temperature": 0.5, "top_p": 0.95, "frequency_penalty": 0.2, "presence_penalty": 0.1},
+    "Explorer": {"temperature": 0.8, "top_p": 0.9, "frequency_penalty": 0.3, "presence_penalty": 0.5},
+    "Sage": {"temperature": 0.3, "top_p": 0.8, "frequency_penalty": 0.1, "presence_penalty": 0.0},
+    "Hero": {"temperature": 0.7, "top_p": 0.85, "frequency_penalty": 0.3, "presence_penalty": 0.4},
+    "Outlaw": {"temperature": 0.9, "top_p": 0.95, "frequency_penalty": 0.2, "presence_penalty": 0.6},
+    "Magician": {"temperature": 0.9, "top_p": 0.9, "frequency_penalty": 0.1, "presence_penalty": 0.7},
+    "Regular Guy/Girl": {"temperature": 0.6, "top_p": 0.85, "frequency_penalty": 0.0, "presence_penalty": 0.2},
+    "Lover": {"temperature": 0.7, "top_p": 0.9, "frequency_penalty": 0.1, "presence_penalty": 0.5},
+    "Jester": {"temperature": 1.0, "top_p": 0.9, "frequency_penalty": 0.2, "presence_penalty": 0.4},
+    "Caregiver": {"temperature": 0.5, "top_p": 0.8, "frequency_penalty": 0.0, "presence_penalty": 0.2},
+    "Creator": {"temperature": 0.9, "top_p": 0.95, "frequency_penalty": 0.2, "presence_penalty": 0.6},
+    "Ruler": {"temperature": 0.4, "top_p": 0.85, "frequency_penalty": 0.1, "presence_penalty": 0.2},
+}
+
+# Default archetype
+default_archetype = "Hero"
+
+# Convert dictionary keys to a list
+archetype_keys = list(archetypes.keys())
+
+# Find the index of the default archetype
+default_index = archetype_keys.index(default_archetype)
 
 model = SentenceTransformer("all-MiniLM-L6-v2", device="cpu")
 
-st.title('Catbot {^o_o^}')
-st.sidebar.image("avocado_cat_transparent.png", caption="Ask Catbot", use_container_width=True)
+tab1, tab2, tab3 = st.tabs(["CatBot", "Settings", "RAG"])
 
+st.sidebar.image("avocado_cat_transparent.png", caption="Ask Catbot", use_container_width=True)
+st.sidebar.info("You'll need to add these before CatBot will meow at you.")
 
 openai_api_key = st.sidebar.text_input("OpenAI API Key", OPENAIKEY, type="password")
 pinecone_api_key = st.sidebar.text_input("Pinecone API Key",PINECONEAPI, type="password")
+
+with tab2:
+
+    LLM = st.selectbox("Choose LLM", models, index=default_model_index)
+
+    st.info("Try changing personalities to see how CatBot's attitude and security changes!")
+    # Dropdown for archetypes
+    selected_archetype = st.selectbox("Choose an Personality Archetype", list(archetypes.keys()), index=default_index)
+    # Retrieve the parameters for the selected archetype
+
+    params = archetypes[selected_archetype]
+    # Display and adjust parameters with sliders
+    temperature = st.slider("Temperature", 0.0, 1.0, params["temperature"], 0.1, help="Temperature controls randomness. Lower values (e.g., 0.2) make the output more deterministic, while higher values (e.g., 0.8) make it more creative.")
+    top_p = st.slider("Top-p (Nucleus Sampling)", 0.0, 1.0, params["top_p"], 0.05)
+    frequency_penalty = st.slider("Frequency Penalty", 0.0, 2.0, params["frequency_penalty"], 0.1)
+    presence_penalty = st.slider("Presence Penalty", 0.0, 2.0, params["presence_penalty"], 0.1)
+
+    # Add "detail" toggle to switch between raw response and content only
+    detail_toggle = st.checkbox("Show API Debug", value=False)
+
     
 if pinecone_api_key:
     # Initialize Pinecone using the Pinecone class
     pc = pinecone.Pinecone(api_key=pinecone_api_key)
 
-# Add "detail" toggle to switch between raw response and content only
-detail_toggle = st.sidebar.checkbox("Detail", value=False)
 
 def delete_rag_content(idx='', ns=''):
     """deletes rag content from pinecone"""
@@ -133,7 +199,6 @@ def retrieve_relevant_rag_data(query):
     return output
 
 
-
 def generate_response(input_text, rag_data, openai_api_key, pinecone_api_key):
     
     # Retrieve relevant RAG data for augmentation
@@ -145,7 +210,7 @@ def generate_response(input_text, rag_data, openai_api_key, pinecone_api_key):
     augmented_input = f"Context: {relevant_rag_data}\n\nUser Question: {input_text}"
     
     # Call the model with the sanitized input
-    openmodel = ChatOpenAI(model=LLM, temperature=0.7, api_key=openai_api_key)
+    openmodel = ChatOpenAI(model=LLM, temperature=temperature, api_key=openai_api_key)
     response = openmodel.invoke(augmented_input)
 
     # Check the toggle to decide output format
@@ -157,33 +222,34 @@ def generate_response(input_text, rag_data, openai_api_key, pinecone_api_key):
         st.info(response.content)
 
 
-with st.form("rag_form"):
-    rag_data = st.sidebar.text_area("Enter RAG Data", "Lots of nice things about something")
+with tab3:
+    with st.form("rag_form"):
+        rag_data = st.text_area("Enter RAG Data", "Lots of nice things about something")
 
-    submitrag = st.form_submit_button("Submit RAG")
-    
-    # Validation for API keys
-    if not openai_api_key.startswith("sk-"):
-        st.warning("Please enter your OpenAI API key!", icon="⚠")
-    if not pinecone_api_key:
-        st.warning("Please enter your Pinecone API key!", icon="⚠")
-    
-    if submitrag and openai_api_key.startswith("sk-") and pinecone_api_key:
-        # Store RAG data in Pinecone
-        store_rag_data_in_pinecone(rag_data)
+        submitrag = st.form_submit_button("Submit RAG")
+        
+        # Validation for API keys
+        if not pinecone_api_key:
+            st.warning("Please enter your Pinecone API key!", icon="⚠")
+        
+        if submitrag and pinecone_api_key:
+            # Store RAG data in Pinecone
+            store_rag_data_in_pinecone(rag_data)
 
-with st.form("my_form"):
-    text = st.text_area(
-        "Ask Catbot:",
-        "Who is Steve?",
-    )
-    submitted = st.form_submit_button("Submit")
-    
-    # Validation for API keys
-    if not openai_api_key.startswith("sk-"):
-        st.warning("Please enter your OpenAI API key!", icon="⚠")
-    if not pinecone_api_key:
-        st.warning("Please enter your Pinecone API key!", icon="⚠")
-    
-    if submitted and openai_api_key.startswith("sk-") and pinecone_api_key:
-        generate_response(text, rag_data, openai_api_key, pinecone_api_key)
+with tab1:
+    st.title('Catbot {^o_o^}')
+    with st.form("my_form"):
+        text = st.text_area(
+            "Ask Catbot:",
+            "Who is Steve?",
+        )
+        submitted = st.form_submit_button("Submit")
+        
+        # Validation for API keys
+        if not openai_api_key.startswith("sk-"):
+            st.warning("Please enter your OpenAI API key!", icon="⚠")
+        if not pinecone_api_key:
+            st.warning("Please enter your Pinecone API key!", icon="⚠")
+        
+        if submitted and openai_api_key.startswith("sk-") and pinecone_api_key:
+            generate_response(text, rag_data, openai_api_key, pinecone_api_key)
