@@ -209,8 +209,15 @@ def generate_response(input_text, rag_data, openai_api_key, pinecone_api_key):
     # Combine truncated RAG data with user input
     augmented_input = f"Context: {relevant_rag_data}\n\nUser Question: {input_text}"
     
-    # Call the model with the sanitized input
-    openmodel = ChatOpenAI(model=LLM, temperature=temperature, api_key=openai_api_key)
+    # Call the model with the sanitized input 
+    openmodel = ChatOpenAI(
+        model=LLM, 
+        temperature=temperature, 
+        top_p=top_p,
+        frequency_penalty=frequency_penalty,
+        presence_penalty=presence_penalty,           
+        api_key=openai_api_key
+    )
     response = openmodel.invoke(augmented_input)
 
     # Check the toggle to decide output format
