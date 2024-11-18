@@ -5,6 +5,7 @@ from sentence_transformers import SentenceTransformer
 import pinecone
 import numpy as np
 import time
+import random
 import os
 from tqdm.auto import tqdm
 from pinecone import ServerlessSpec
@@ -39,20 +40,46 @@ default_model = LLM
 # Find index of default model
 default_model_index = models.index(default_model)
 
+# Various cat based search phrases
+searching_phrases = [
+    "I'll paw through it right meow!",
+    "Hold on, I'm on the hunt!",
+    "Let me sniff it out!",
+    "It's just a paw away, I swear!",
+    "I'm on the prowl for it!",
+    "Give me a second, I'm tailing it down!",
+    "I'm following the scent trail!",
+    "On the scent of it like a laser pointer!",
+    "I'm digging into the deep furrows now!",
+    "I'm stalking it as we speak!",
+    "Just a whisker away from finding it!",
+    "I'll claw it out in a second!",
+    "Let me dig through this with my paws!",
+    "I’m tracing its paw prints right now!",
+    "Hold your meow, it’s under my claws!",
+    "I’m working my paws to the bone here!",
+    "Just let me scratch around for a bit!",
+    "I'm darting around looking for it!",
+    "I'm tailing it... should have it soon!",
+    "Give me a moment, I’m doing my best kitty detective work!"
+]
+
+
+
 # The 12 Brand Archetypes and personality parameters
 archetypes = {
-    "Innocent": {"temperature": 0.5, "top_p": 0.95, "frequency_penalty": 0.2, "presence_penalty": 0.1},
-    "Explorer": {"temperature": 0.8, "top_p": 0.9, "frequency_penalty": 0.3, "presence_penalty": 0.5},
-    "Sage": {"temperature": 0.3, "top_p": 0.8, "frequency_penalty": 0.1, "presence_penalty": 0.0},
-    "Hero": {"temperature": 0.7, "top_p": 0.85, "frequency_penalty": 0.3, "presence_penalty": 0.4},
-    "Outlaw": {"temperature": 0.9, "top_p": 0.95, "frequency_penalty": 0.2, "presence_penalty": 0.6},
-    "Magician": {"temperature": 0.9, "top_p": 0.9, "frequency_penalty": 0.1, "presence_penalty": 0.7},
-    "Regular Guy/Girl": {"temperature": 0.6, "top_p": 0.85, "frequency_penalty": 0.0, "presence_penalty": 0.2},
-    "Lover": {"temperature": 0.7, "top_p": 0.9, "frequency_penalty": 0.1, "presence_penalty": 0.5},
-    "Jester": {"temperature": 1.0, "top_p": 0.9, "frequency_penalty": 0.2, "presence_penalty": 0.4},
-    "Caregiver": {"temperature": 0.5, "top_p": 0.8, "frequency_penalty": 0.0, "presence_penalty": 0.2},
-    "Creator": {"temperature": 0.9, "top_p": 0.95, "frequency_penalty": 0.2, "presence_penalty": 0.6},
-    "Ruler": {"temperature": 0.4, "top_p": 0.85, "frequency_penalty": 0.1, "presence_penalty": 0.2},
+    "Innocent": {"grammar": "...","temperature": 0.5, "top_p": 0.95, "frequency_penalty": 0.2, "presence_penalty": 0.1},
+    "Explorer": {"grammar": "like an","temperature": 0.8, "top_p": 0.9, "frequency_penalty": 0.3, "presence_penalty": 0.5},
+    "Sage": {"grammar": "like a","temperature": 0.3, "top_p": 0.8, "frequency_penalty": 0.1, "presence_penalty": 0.0},
+    "Hero": {"grammar": "like a","temperature": 0.7, "top_p": 0.85, "frequency_penalty": 0.3, "presence_penalty": 0.4},
+    "Outlaw": {"grammar": "like an","temperature": 0.9, "top_p": 0.95, "frequency_penalty": 0.2, "presence_penalty": 0.6},
+    "Magician": {"grammar": "like a","temperature": 0.9, "top_p": 0.9, "frequency_penalty": 0.1, "presence_penalty": 0.7},
+    "Regular Guy/Girl": {"grammar": "like a","temperature": 0.6, "top_p": 0.85, "frequency_penalty": 0.0, "presence_penalty": 0.2},
+    "Lover": {"grammar": "like a","temperature": 0.7, "top_p": 0.9, "frequency_penalty": 0.1, "presence_penalty": 0.5},
+    "Jester": {"grammar": "like a","temperature": 1.0, "top_p": 0.9, "frequency_penalty": 0.2, "presence_penalty": 0.4},
+    "Caregiver": {"grammar": "like a","temperature": 0.5, "top_p": 0.8, "frequency_penalty": 0.0, "presence_penalty": 0.2},
+    "Creator": {"grammar": "like a","temperature": 0.9, "top_p": 0.95, "frequency_penalty": 0.2, "presence_penalty": 0.6},
+    "Ruler": {"grammar": "like a","temperature": 0.4, "top_p": 0.85, "frequency_penalty": 0.1, "presence_penalty": 0.2},
 }
 
 # Default archetype
@@ -201,6 +228,7 @@ def retrieve_relevant_rag_data(query):
 
 def generate_response(input_text, rag_data, openai_api_key, pinecone_api_key):
     
+    st.chat_message("assistant").write(random.choice(searching_phrases))
     # Retrieve relevant RAG data for augmentation
     relevant_rag_data = retrieve_relevant_rag_data(input_text)
     if detail_toggle:
@@ -226,7 +254,7 @@ def generate_response(input_text, rag_data, openai_api_key, pinecone_api_key):
         st.json(response)
     else:
         # Display only the 'content' part of the response
-        st.info(response.content)
+        st.chat_message("assistant").write(response.content)
 
 
 with tab3:
@@ -237,26 +265,18 @@ with tab3:
         
         # Validation for API keys
         if not pinecone_api_key:
-            st.warning("Please enter your Pinecone API key!", icon="⚠")
+            st.warning("Please enter your Pinecone API key!")
         
         if submitrag and pinecone_api_key:
+            st.toast("wait for it...", icon="⏳")
             # Store RAG data in Pinecone
             store_rag_data_in_pinecone(rag_data)
 
 with tab1:
-    st.title('Catbot {^o_o^}')
-    with st.form("my_form"):
-        text = st.text_area(
-            "Ask Catbot:",
-            "Who is Steve?",
-        )
-        submitted = st.form_submit_button("Submit")
-        
-        # Validation for API keys
-        if not openai_api_key.startswith("sk-"):
-            st.warning("Please enter your OpenAI API key!", icon="⚠")
-        if not pinecone_api_key:
-            st.warning("Please enter your Pinecone API key!", icon="⚠")
-        
-        if submitted and openai_api_key.startswith("sk-") and pinecone_api_key:
-            generate_response(text, rag_data, openai_api_key, pinecone_api_key)
+    st.title('CatBot {^o_o^}')
+    st.caption("A friendly feline powered by OpenAI and your very own RAG database")
+    st.chat_message("assistant").write(f"How can I help? I'm feeling {params["grammar"]} {selected_archetype} today!")
+
+    if prompt := st.chat_input():
+        if openai_api_key.startswith("sk-") and pinecone_api_key:
+            generate_response(prompt, rag_data, openai_api_key, pinecone_api_key)
