@@ -7,10 +7,11 @@ Catbot is an AI-powered C(h)atbot built with LangChain, OpenAI, and Pinecone. Th
 - **Streamlit Interface**: A user-friendly UI built with Streamlit.
 ![Alt Text](images/CatBotChat.png)
 - **Chat Models**: Utilizes `ChatOpenAI` from LangChain for intelligent responses.
-- **Configurable Modeks**: Dropdown settings to try different mainstream models.
+- **Configurable Models**: Dropdown settings to try different mainstream models.
 - **Configurable Archetypes**: Dropdown settings set CatBot to different personalities.
 ![Alt Text](images/CatBotSettings.png)
 - **Vector Database Integration**: Leverages Pinecone for managing and querying RAG embeddings.
+- **Works with pre-existing Pinecone databases**: Change the 'index' to access pre-existing RAG data.
 ![Alt Text](images/RAGData.png)
 
 ## Installation
@@ -40,7 +41,7 @@ Catbot is an AI-powered C(h)atbot built with LangChain, OpenAI, and Pinecone. Th
 
 Once the app is running, navigate to `http://localhost:8501` to access the chatbot interface. If this is your first time using CatBot, go the the RAG tab and add some experimental data and click Submit RAG to create your private vector database.  Now input your queries and receive contextually relevant responses. See the Settings tabs to change models and personalities!
 
-## Configuration Options
+## Pinecone Configuration Options
 
 - `BATCH_SIZE`: Controls the number of vectors processed in each batch.
 - `VECTOR_LIMIT`: Sets a limit on the number of vectors for Pinecone storage.
