@@ -73,6 +73,9 @@ docs/_build/
 # PyBuilder
 target/
 
+# Deadversions
+old/
+
 # Jupyter Notebook
 .ipynb_checkpoints
 
