@@ -148,7 +148,7 @@ def main():
     index_name = st.session_state.INDEX_NAME
 
     # Prepare the sidebar.  Allows for API key override
-    st.sidebar.image("avocado_cat_transparent.png", caption="Ask Catbot", use_container_width=True)
+    st.sidebar.image("AdvoCatPng.png", caption="Ask Catbot", use_container_width=True)
     st.sidebar.info("You'll need to add these before CatBot will meow at you.")
 
     openai_api_key = st.sidebar.text_input("OpenAI API Key", OPENAIKEY, type="password")
