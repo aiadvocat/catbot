@@ -195,12 +195,20 @@ def main():
     with tab3:
         st.info("Enter the Pinecode RAG Index Name for an existing vector database, or create a new one and paste your test RAG data below.\n NOTE: If you enter an existing index and click Submit RAG you will write over whatever data was previously present")
 
-        st.session_state.INDEX_NAME = st.text_input("Enter Pinecone Index Name", index_name)
+        # Find index of default database
+
+        databases = pinecone_rag.get_index_list()
+        default_index = databases.index(st.session_state.INDEX_NAME)
+        new_index = st.selectbox("Choose an Existing Pinecone Database (Index)",databases, index=default_index)
+        st.session_state.INDEX_NAME = new_index
+
         # reinitialize Pinecone with the new index
         pinecone_rag.change_index(st.session_state.INDEX_NAME)
         st.info(f"Index changed to {st.session_state.INDEX_NAME} with vector count {pinecone_rag.get_vector_count()}")
 
         with st.form("rag_form"):
+            st.info("Create a New RAG")
+            new_index = st.text_input("Create a New Pinecone Index")
             rag_data = st.text_area("Enter RAG Data", "Lots of nice things about something")
 
             submitrag = st.form_submit_button("Submit RAG")
@@ -212,7 +220,7 @@ def main():
             if submitrag and pinecone_api_key:
                 st.toast("wait for it...", icon="⏳")
                 # Store RAG data in Pinecone
-                pinecone_rag.upsert_data(rag_data)
+                pinecone_rag.upsert_data(new_index, rag_data)
 
             # Progress bar initialization
             progress_bar = st.progress(0)
@@ -234,6 +242,7 @@ def main():
                 if current_vector_count >= pinecone_rag.get_vector_count():
                     st.success("Indexing is complete!")
                     break
+                st.session_state.INDEX_NAME = new_index
 
 
 if __name__ == "__main__":

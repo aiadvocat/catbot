@@ -97,17 +97,28 @@ class PineconeRAG:
 
     def get_vector_count(self):
         return self.vector_count
+    
+    def get_index_list(self):
+        return self.pc.list_indexes().names()    
+    
+    def delete_index(self, index_name):
+        if index_name in self.pc.list_indexes().names():
+            self.pc.delete_index(index_name)
+            print(f"Index '{index_name}' deleted successfully.")
+        else:
+            print(f"Index '{index_name}' does not exist.")    
 
     def describe_index_stats(self):
         return self.index.describe_index_stats()        
 
-    def upsert_data(self, rag_data):
+    def upsert_data(self, new_index, rag_data):
         """
         Inserts or updates vectors in the Pinecone index.
         
         Args:
             rag_data (str): data to be indexed.
         """
+        self.change_index(new_index)
         if isinstance(rag_data, str):
             self._private_upsert_text(rag_data)
         # Process the lines and sentences
