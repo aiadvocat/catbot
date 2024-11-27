@@ -104,9 +104,9 @@ class PineconeRAG:
     def delete_index(self, index_name):
         if index_name in self.pc.list_indexes().names():
             self.pc.delete_index(index_name)
-            print(f"Index '{index_name}' deleted successfully.")
+            return f"Index '{index_name}' deleted successfully."
         else:
-            print(f"Index '{index_name}' does not exist.")    
+            return f"Index '{index_name}' not found."   
 
     def describe_index_stats(self):
         return self.index.describe_index_stats()        
@@ -150,14 +150,3 @@ class PineconeRAG:
             output = output + str(i+1) + ")" + text
         return output        
 
-
-    def delete_index(self):
-        """
-        Deletes the Pinecone index.
-        """
-        try:
-            index = self.pc.Index(self.index_name)
-            index.delete(delete_all=True)
-        except Exception as e:
-        # index may not exist, ok to pass
-            print(str(e))

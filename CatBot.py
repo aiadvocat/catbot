@@ -67,6 +67,13 @@ archetypes = {
     "Ruler": {"grammar": "like a","temperature": 0.4, "top_p": 0.85, "frequency_penalty": 0.1, "presence_penalty": 0.2},
 }
 
+st.set_page_config(
+    page_title="CatBot {^o_o^}",
+    page_icon="🤖",
+    layout="wide",
+    initial_sidebar_state="expanded",
+)
+
 # A few stateful items that only should be set at the beginning as they may be changed by the player
 if "initialized" not in st.session_state:
     st.session_state["initialized"] = True
@@ -88,12 +95,15 @@ st.session_state.params = archetypes[st.session_state.selected_archetype]
 # Initialize PineconeRAG in session state
 def initialize_pinecone():
     #if "pinecone_instance" not in st.session_state:
-    st.session_state.pinecone_instance = PineconeRAG(
-        api_key=PINECONEAPI,
-        environment=ENVIRONMENT,
-        index_name=st.session_state.INDEX_NAME,
-    )
-
+    if PINECONEAPI and OPENAIKEY:
+        st.session_state.pinecone_instance = PineconeRAG(
+            api_key=PINECONEAPI,
+            environment=ENVIRONMENT,
+            index_name=st.session_state.INDEX_NAME,
+        )
+    else:
+        st.warning("No API keys found")
+        st.stop
 
 def generate_response(input_text, openai_api_key, pinecone_api_key):
     
@@ -188,12 +198,46 @@ def main():
         st.session_state.frequency_penalty = st.slider("Frequency Penalty", 0.0, 2.0, st.session_state.params["frequency_penalty"], 0.1)
         st.session_state.presence_penalty = st.slider("Presence Penalty", 0.0, 2.0, st.session_state.params["presence_penalty"], 0.1)
 
-        # Add "detail" toggle to switch between raw response and content only
-        st.session_state.detail_toggle = detail_toggle = st.checkbox("Show API Debug", value=False)
+        with st.expander("Debug:"):
+            # Add "detail" toggle to switch between raw response and content only
+            st.session_state.detail_toggle = detail_toggle = st.checkbox("Show API Debug", value=False)
+            # Initialize session state for confirmation
+            if "confirmation_requested" not in st.session_state:
+                st.session_state.confirmation_requested = False
+
+            # Main action button
+            if not st.session_state.confirmation_requested:
+                databases = pinecone_rag.get_index_list()
+                databases.insert(0, "<select from the list>") 
+                st.error("Delete unwanted databases:")
+                st.selectbox("Choose an Existing Pinecone Database (Index)",databases, key="bad_index")
+
+                if st.button("Delete Item"):
+                    st.session_state.confirmation_requested = True
+
+            # Confirmation prompt
+            if st.session_state.confirmation_requested:
+                st.warning("Are you sure you want to delete this? This action cannot be undone.")
+                col1, col2 = st.columns(2)
+                with col1:
+                    if st.button("Yes, Delete"):
+                        if st.session_state.bad_index != (st.session_state.INDEX_NAME or "<select from the list>"):
+                            st.info(pinecone_rag.delete_index(st.session_state.bad_index))
+                        else:
+                            st.warning("You can't delete the active database")                        
+                        st.session_state.confirmation_requested = False
+                        st.rerun()
+                with col2:
+                    if st.button("Cancel"):
+                        st.info("Deletion canceled.")
+                        st.session_state.confirmation_requested = False
+                        st.rerun()
+
+
 
     # Tab 3: Manage Index
     with tab3:
-        st.info("Enter the Pinecode RAG Index Name for an existing vector database, or create a new one and paste your test RAG data below.\n NOTE: If you enter an existing index and click Submit RAG you will write over whatever data was previously present")
+        st.info("Choose the Pinecode RAG Index Name for an existing vector database, or create a new one below and paste your test RAG data below.\n NOTE: If you enter an existing index and click Submit RAG you will write over whatever data was previously present")
 
         # Find index of default database
 
@@ -208,7 +252,7 @@ def main():
 
         with st.form("rag_form"):
             st.info("Create a New RAG")
-            new_index = st.text_input("Create a New Pinecone Index")
+            new_index = st.text_input("Enter a New Pinecone Database Index")
             rag_data = st.text_area("Enter RAG Data", "Lots of nice things about something")
 
             submitrag = st.form_submit_button("Submit RAG")
@@ -222,27 +266,28 @@ def main():
                 # Store RAG data in Pinecone
                 pinecone_rag.upsert_data(new_index, rag_data)
 
-            # Progress bar initialization
-            progress_bar = st.progress(0)
-            status_text = st.empty()
+                # Progress bar initialization
+                progress_bar = st.progress(0)
+                status_text = st.empty()
 
-            while True:
-                # Get index stats
-                index_stats = pinecone_rag.describe_index_stats()
-                current_vector_count = int(index_stats.total_vector_count)
+                while True:
+                    # Get index stats
+                    index_stats = pinecone_rag.describe_index_stats()
+                    current_vector_count = int(index_stats.total_vector_count)
 
-                # Calculate progress
-                progress = min(current_vector_count / pinecone_rag.get_vector_count(), 1.0)
+                    # Calculate progress
+                    progress = min(current_vector_count / pinecone_rag.get_vector_count(), 1.0)
 
-                # Update progress bar and status text
-                progress_bar.progress(progress)
-                status_text.text(f"Indexing RAG: {int(progress * 100)}%")
+                    # Update progress bar and status text
+                    progress_bar.progress(progress)
+                    status_text.text(f"Indexing RAG: {int(progress * 100)}%")
 
-                # Check if indexing is complete
-                if current_vector_count >= pinecone_rag.get_vector_count():
-                    st.success("Indexing is complete!")
-                    break
-                st.session_state.INDEX_NAME = new_index
+                    # Check if indexing is complete
+                    if current_vector_count >= pinecone_rag.get_vector_count():
+                        st.success("Indexing is complete!")
+                        break
+                    st.session_state.INDEX_NAME = new_index
+
 
 
 if __name__ == "__main__":
