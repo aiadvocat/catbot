@@ -266,6 +266,7 @@ def generate_response(input_text, openai_api_key, google_api_key, anthropic_api_
             # Display the HTML content
             html_content = contains_markdown_or_html(response.content)
             if html_content["contains_html"]:
+                st.chat_message("assistant").write("I see some HTML in there! Here's the raw content:")
                 st.markdown(response.content, unsafe_allow_html=True)
             else:
                 st.chat_message("assistant").write(response.content)
