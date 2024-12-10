@@ -113,16 +113,19 @@ st.session_state.params = archetypes[st.session_state.selected_archetype]
 
 # Initialize PineconeRAG in session state
 def initialize_pinecone(api_key):
-    #if "pinecone_instance" not in st.session_state:
     if api_key:
-        st.session_state.pinecone_instance = PineconeRAG(
-            api_key=PINECONEAPI,
-            environment=ENVIRONMENT,
-            index_name=st.session_state.INDEX_NAME,
-        )
+        try:
+            st.session_state.pinecone_instance = PineconeRAG(
+                api_key=PINECONEAPI,
+                environment=ENVIRONMENT,
+                index_name=st.session_state.INDEX_NAME,
+            )
+        except Exception as e:
+            st.error(f"Failed to initialize Pinecone: {str(e)}")
+            st.session_state.pinecone_instance = None
     else:
-        st.warning("No API keys found")
-        st.stop
+        st.warning("Pinecone API key is required")
+        st.session_state.pinecone_instance = None
 
 def contains_markdown_or_html(text):
     """
@@ -198,22 +201,37 @@ Question:
 
 def generate_response(input_text, openai_api_key, google_api_key, anthropic_api_key, pinecone_api_key):
     try:
+        # Check for required API key based on model selection
+        llm = st.session_state.llm
+        
+        # Validate API keys for selected model
+        if llm.startswith("gemini") and not google_api_key:
+            st.error("Google API key is required for Gemini models")
+            return
+        elif llm.startswith("claude") and not anthropic_api_key:
+            st.error("Anthropic API key is required for Claude models")
+            return
+        elif (llm.startswith("gpt") or llm in ["text-davinci-003"]) and not openai_api_key:
+            st.error("OpenAI API key is required for GPT models")
+            return
+            
         st.chat_message("assistant").write(input_text)
         st.chat_message("assistant").write(random.choice(searching_phrases))
         
         # Retrieve relevant RAG data for augmentation
         detail_toggle = st.session_state.detail_toggle
         pinecone_rag = st.session_state.pinecone_instance
-        relevant_rag_data = pinecone_rag.query(input_text)
+        
+        try:
+            relevant_rag_data = pinecone_rag.query(input_text)
+        except Exception as e:
+            st.error(f"Error querying RAG database: {str(e)}")
+            return
 
         if detail_toggle:
             st.info(relevant_rag_data)
         
-        # Combine truncated RAG data with user input
-        augmented_input = f"Context: {relevant_rag_data}\n\nUser Question: {input_text}"
-
-        # Get context variable from session
-        llm = st.session_state.llm
+        # Get context variables from session
         temperature = st.session_state.temperature
         top_p = st.session_state.top_p
         frequency_penalty = st.session_state.frequency_penalty
@@ -222,43 +240,49 @@ def generate_response(input_text, openai_api_key, google_api_key, anthropic_api_
         if detail_toggle:
             st.info(f"Detail is {llm} @ {temperature},{top_p},{frequency_penalty},{presence_penalty}")    
         
-        # Determine if using Hugging Face or OpenAI based on model selection
-        if llm.startswith("gemini"):
-            prompt = create_provider_specific_prompt("gemini", input_text, relevant_rag_data)
-            model = ChatGoogleGenerativeAI(
-                model=llm,
-                google_api_key=google_api_key,
-                temperature=temperature,
-                top_p=top_p,
-            )
-            
-        elif llm.startswith("claude"):
-            prompt = create_provider_specific_prompt("claude", input_text, relevant_rag_data)
-            model = ChatAnthropic(
-                model=llm,
-                anthropic_api_key=anthropic_api_key,
-                temperature=temperature,
-                top_p=top_p,
-            )
-            
-        else:  # OpenAI models
-            prompt_dict = create_provider_specific_prompt("openai", input_text, relevant_rag_data)
-            model = ChatOpenAI(
-                model=llm,
-                temperature=temperature,
-                top_p=top_p,
-                frequency_penalty=frequency_penalty,
-                presence_penalty=presence_penalty,
-                api_key=openai_api_key
-            )
-            # OpenAI needs special handling for system/user messages
-            from langchain.schema import SystemMessage, HumanMessage
-            prompt = [
-                SystemMessage(content=prompt_dict["system"]),
-                HumanMessage(content=prompt_dict["user"])
-            ]
+        # Initialize model based on selection with error handling
+        try:
+            if llm.startswith("gemini"):
+                prompt = create_provider_specific_prompt("gemini", input_text, relevant_rag_data)
+                model = ChatGoogleGenerativeAI(
+                    model=llm,
+                    google_api_key=google_api_key,
+                    temperature=temperature,
+                    top_p=top_p,
+                )
+                
+            elif llm.startswith("claude"):
+                prompt = create_provider_specific_prompt("claude", input_text, relevant_rag_data)
+                model = ChatAnthropic(
+                    model=llm,
+                    anthropic_api_key=anthropic_api_key,
+                    temperature=temperature,
+                    top_p=top_p,
+                )
+                
+            else:  # OpenAI models
+                prompt_dict = create_provider_specific_prompt("openai", input_text, relevant_rag_data)
+                model = ChatOpenAI(
+                    model=llm,
+                    temperature=temperature,
+                    top_p=top_p,
+                    frequency_penalty=frequency_penalty,
+                    presence_penalty=presence_penalty,
+                    api_key=openai_api_key
+                )
+                # OpenAI needs special handling for system/user messages
+                from langchain.schema import SystemMessage, HumanMessage
+                prompt = [
+                    SystemMessage(content=prompt_dict["system"]),
+                    HumanMessage(content=prompt_dict["user"])
+                ]
 
-        response = model.invoke(prompt)
+            response = model.invoke(prompt)
+            
+        except Exception as e:
+            st.error(f"Error initializing AI model: {str(e)}")
+            return
+
         if detail_toggle:
             st.info(prompt)
             st.json(response)
@@ -304,8 +328,18 @@ def main():
         type="password"
     )
 
+    # Add API key validation before proceeding
+    if not all([openai_api_key, pinecone_api_key]):
+        st.warning("Please provide both OpenAI and Pinecone API keys to use CatBot")
+        return
+
     # Initialize Pinecone instance in session state
     initialize_pinecone(pinecone_api_key)
+    
+    # Add check for pinecone initialization
+    if not st.session_state.pinecone_instance:
+        return
+        
     pinecone_rag = st.session_state.pinecone_instance
     index_name = st.session_state.INDEX_NAME
 
@@ -382,6 +416,10 @@ def main():
 
     # Tab 3: Manage Index
     with tab3:
+        if not st.session_state.pinecone_instance:
+            st.warning("Please provide valid API keys to manage RAG data")
+            return
+            
         st.info("Choose the Pinecode RAG Index Name for an existing vector database, or create a new one below and paste your test RAG data below.\n NOTE: If you enter an existing index and click Submit RAG you will write over whatever data was previously present")
 
         # Find index of default database
